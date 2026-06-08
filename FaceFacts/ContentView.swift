@@ -6,19 +6,51 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
+    @Environment(\.modelContext) var modelContext
+    @State private var path = NavigationPath()
+    
+    @State private var sortOrder = [SortDescriptor(\Person.name)]
+    @State private var searchText = ""
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        NavigationStack(path: $path) {
+            PeopleView(searchText: searchText, sortOrder: sortOrder)
+                .navigationTitle("FaceFacts")
+                .navigationDestination(for: Person.self) { person in
+                    EditPersonView(person: person, navigationPath: $path)
+                }
+                .toolbar {
+                    Menu("Sort", systemImage: "arrow.up.arrow.down") {
+                        Picker("sort", selection: $sortOrder) {
+                            Text("Name (A-Z)")
+                                .tag([SortDescriptor(\Person.name)])
+                            Text("Name (Z-A)")
+                                .tag([SortDescriptor(\Person.name, order: .reverse)])
+                        }
+                    }
+                    Button("Add Button", systemImage: "plus", action: addPerson)
+                }
+                .searchable(text: $searchText)
         }
-        .padding()
+    }
+    
+    func addPerson() {
+        let person = Person(name: "", email: "", details: "")
+        modelContext.insert(person)
+        path.append(person)
     }
 }
 
 #Preview {
-    ContentView()
+    do {
+        let previewer = try Previewer()
+        
+        return ContentView()
+                .modelContainer(previewer.container)
+    } catch {
+        return Text("Error in loading preview for \(#file) \(error.localizedDescription)")
+    }
 }
